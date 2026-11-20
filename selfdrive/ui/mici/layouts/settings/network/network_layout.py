@@ -96,7 +96,7 @@ class NetworkLayoutMici(NavScroller):
     self._wifi_manager.set_ipv4_forward(show_cell_settings)
     self._roaming_btn.set_visible(show_cell_settings)
     self._apn_btn.set_visible(show_cell_settings)
-    self._cellular_metered_btn.set_visible(show_cell_settings)
+    self._cellular_metered_btn.set_visible(True)  # fork: always show, so Prime SIM users can unmeter cellular uploads
 
   def show_event(self):
     super().show_event()
