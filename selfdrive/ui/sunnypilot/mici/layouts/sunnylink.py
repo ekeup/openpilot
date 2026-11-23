@@ -97,6 +97,43 @@ class DmSensitivityBigButton(BigButton):
     self.refresh()
 
 
+CAMERA_OFFSET_OPTIONS = [0.0, 0.05, 0.10, 0.15, -0.05, -0.10, -0.15]
+
+
+class CameraOffsetBigButton(BigButton):
+  # sunnypilot already ships the CameraOffset param and modeld support for it
+  # (sunnypilot/modeld_v2/camera_offset_helper.py shears the model input,
+  # mimicking a laterally offset camera, so the car re-centers in the lane);
+  # it just has no settings UI on mici. This button cycles preset values.
+  # modeld re-reads the param about once a second and eases the applied
+  # offset toward it, so changes take effect live on the next drive.
+  def __init__(self):
+    super().__init__(tr("camera offset"), "")
+    self.set_enabled(lambda: not ui_state.engaged)
+    self.refresh()
+
+  @staticmethod
+  def _get_val() -> float:
+    try:
+      return float(ui_state.params.get("CameraOffset") or 0.0)
+    except (TypeError, ValueError):
+      return 0.0
+
+  def refresh(self):
+    val = self._get_val()
+    self.set_value("0 (stock)" if val == 0.0 else f"{val:+.2f}")
+
+  def _handle_mouse_release(self, mouse_pos: MousePos):
+    super()._handle_mouse_release(mouse_pos)
+    if ui_state.engaged:
+      return
+    cur = self._get_val()
+    idx = next((i for i, v in enumerate(CAMERA_OFFSET_OPTIONS) if abs(v - cur) < 1e-6), 0)
+    nxt = CAMERA_OFFSET_OPTIONS[(idx + 1) % len(CAMERA_OFFSET_OPTIONS)]
+    ui_state.params.put("CameraOffset", nxt)
+    self.refresh()
+
+
 class SunnylinkLayoutMici(NavScroller):
   def __init__(self, back_callback: Callable):
     super().__init__()
@@ -119,11 +156,13 @@ class SunnylinkLayoutMici(NavScroller):
     self._sunnylink_uploader_toggle = BigToggle(text=tr("sunnylink uploader"), initial_state=False,
                                                 toggle_callback=self._sunnylink_uploader_callback)
     self._dm_sensitivity_btn = DmSensitivityBigButton()
+    self._camera_offset_btn = CameraOffsetBigButton()
 
     self._scroller.add_widgets([
       self._sunnylink_info,
       self._sunnylink_toggle,
       self._dm_sensitivity_btn,
+      self._camera_offset_btn,
       self._sunnylink_sponsor_button,
       self._sunnylink_pair_button,
       self._backup_btn,
@@ -143,6 +182,7 @@ class SunnylinkLayoutMici(NavScroller):
     # deliberately not gated on sunnylink being enabled: driver monitoring
     # sensitivity has nothing to do with the sunnylink service
     self._dm_sensitivity_btn.refresh()
+    self._camera_offset_btn.refresh()
     self.handle_backup_restore_progress()
 
     self._sunnylink_info.device_id_text.set_text(ui_state.params.get("SunnylinkDongleId") or UNREGISTERED_SUNNYLINK_DONGLE_ID)
