@@ -97,7 +97,8 @@ class DmSensitivityBigButton(BigButton):
     self.refresh()
 
 
-CAMERA_OFFSET_OPTIONS = [0.0, 0.05, 0.10, 0.15, -0.05, -0.10, -0.15]
+CAMERA_OFFSET_OPTIONS = [0.0, 0.05, 0.10, 0.15, 0.25, 0.50, 0.75, 1.00,
+                         -1.00, -0.75, -0.50, -0.25, -0.15, -0.10, -0.05]
 
 
 class CameraOffsetBigButton(BigButton):
