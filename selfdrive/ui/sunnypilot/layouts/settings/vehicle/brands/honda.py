@@ -17,8 +17,8 @@ DESCRIPTIONS = {
     'sunnypilot will not take over control of gas and brakes. Factory Honda Nidec longitudinal control will be used.'
   ),
   'steer_cap': tr_noop(
-    'Maximum steering torque request for the 2015-16 CR-V. Stock is 1000. Applies within a second of changing it; ' +
-    'for a clean test, set it before you drive.'
+    'Maximum steering torque request for the 2015-16 CR-V. Stock is 1000. Takes effect at the next drive start; ' +
+    'set it while parked, before you drive.'
   ),
 }
 
