@@ -55,7 +55,7 @@ class SunnylinkInfo(Widget):
     self.sponsor_text.set_position(self._rect.x + 20, self._rect.y + 161 - 25)
     self.sponsor_text.render()
 
-STEER_CAP_PRESETS = [1000, 1025, 1050, 1075]  # 1000 is stock; fine steps only, per Erik 2026-11-23
+STEER_CAP_PRESETS = [1000]  # stock only: this CR-V's EPS faults on torque requests above 1000 at highway speed (verified 2026-11-23); opendbc clamps at 1000 regardless
 
 
 class SteerCapBigButton(BigButton):
