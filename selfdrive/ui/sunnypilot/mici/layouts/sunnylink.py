@@ -55,7 +55,7 @@ class SunnylinkInfo(Widget):
     self.sponsor_text.set_position(self._rect.x + 20, self._rect.y + 161 - 25)
     self.sponsor_text.render()
 
-STEER_CAP_PRESETS = [500, 750, 1000, 1100, 1250, 1500, 1750, 2000]  # 1000 is stock
+STEER_CAP_PRESETS = [1000, 1025, 1050, 1075]  # 1000 is stock; fine steps only, per Erik 2026-11-23
 
 
 class SteerCapBigButton(BigButton):
