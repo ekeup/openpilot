@@ -12,7 +12,6 @@ from openpilot.sunnypilot.sunnylink.api import UNREGISTERED_SUNNYLINK_DONGLE_ID
 from openpilot.system.ui.lib.application import gui_app, FontWeight
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.sunnypilot.widgets.list_view import button_item_sp
-from openpilot.system.ui.sunnypilot.widgets.list_view import option_item_sp
 from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp
 from openpilot.system.ui.sunnypilot.widgets.sunnylink_pairing_dialog import SunnylinkPairingDialog
 from openpilot.system.ui.widgets import Widget, DialogResult
@@ -181,16 +180,6 @@ class SunnylinkLayout(Widget):
                   tr("(Only for highest tiers, and does NOT bring ANY benefit to you yet. We are just testing data volume.)"),
       param="EnableSunnylinkUploader"
     )
-    self._steer_cap = option_item_sp(
-      title=lambda: tr("CR-V: Steering Torque Cap"),
-      param="HondaSteerCapParams",
-      description=lambda: tr("Maximum steering torque request for the 2015-16 CR-V. Stock is 1000. Takes effect at the next drive start; "
-                             "set it while parked, before you drive."),
-      min_value=500,
-      max_value=2000,
-      value_change_step=50,
-      enabled=lambda: not ui_state.engaged,
-    )
     self._sunnylink_backup_restore_buttons = dual_button_item(
       description="",
       left_text=tr("Backup Settings"),
@@ -215,9 +204,7 @@ class SunnylinkLayout(Widget):
       LineSeparator(),
       self._sunnylink_uploader_toggle,
       LineSeparator(),
-      self._sunnylink_backup_restore_buttons,
-      LineSeparator(),
-      self._steer_cap
+      self._sunnylink_backup_restore_buttons
     ]
     return items
 
