@@ -109,7 +109,10 @@ class CameraOffsetBigButton(BigButton):
   # offset toward it, so changes take effect live on the next drive.
   def __init__(self):
     super().__init__(tr("camera offset"), "")
-    self.set_enabled(lambda: not ui_state.engaged)
+    # Deliberately NOT gated on engaged (unlike the other buttons here):
+    # live tuning while driving is the point of this control. modeld
+    # re-reads the param about once a second and eases the applied offset
+    # toward it (0.9/0.1 lerp per model frame), and the steps are small.
     self.refresh()
 
   @staticmethod
@@ -125,8 +128,6 @@ class CameraOffsetBigButton(BigButton):
 
   def _handle_mouse_release(self, mouse_pos: MousePos):
     super()._handle_mouse_release(mouse_pos)
-    if ui_state.engaged:
-      return
     cur = self._get_val()
     idx = next((i for i, v in enumerate(CAMERA_OFFSET_OPTIONS) if abs(v - cur) < 1e-6), 0)
     nxt = CAMERA_OFFSET_OPTIONS[(idx + 1) % len(CAMERA_OFFSET_OPTIONS)]
