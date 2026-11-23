@@ -65,7 +65,11 @@ class DmSensitivityBigButton(BigButton):
   # confidence can dip lower before the driver counts as "not seen", which is
   # what sun glare causes.
   def __init__(self):
-    super().__init__(tr("driver monitoring sensitivity"), "")
+    # Label stays short on purpose: BigButton draws the value in whatever
+    # vertical space the wrapped label leaves, and a long label ("driver
+    # monitoring sensitivity", 3 lines) squeezed the value out entirely --
+    # Erik saw the button with no value on device 2026-11-23.
+    super().__init__(tr("driver monitoring"), "")
     self.set_enabled(lambda: not ui_state.engaged)
     self.refresh()
 
