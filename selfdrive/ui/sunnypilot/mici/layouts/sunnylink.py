@@ -97,8 +97,8 @@ class DmSensitivityBigButton(BigButton):
     self.refresh()
 
 
-CAMERA_OFFSET_OPTIONS = [0.0, 0.05, 0.10, 0.15, 0.25, 0.50, 0.75, 1.00, 1.50, 2.00, 2.50, 3.00,
-                         -3.00, -2.50, -2.00, -1.50, -1.00, -0.75, -0.50, -0.25, -0.15, -0.10, -0.05]
+CAMERA_OFFSET_OPTIONS = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0,
+                         -10.0, -9.0, -8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0]
 
 
 class CameraOffsetBigButton(BigButton):
@@ -113,7 +113,8 @@ class CameraOffsetBigButton(BigButton):
     # Deliberately NOT gated on engaged (unlike the other buttons here):
     # live tuning while driving is the point of this control. modeld
     # re-reads the param about once a second and eases the applied offset
-    # toward it (0.9/0.1 lerp per model frame), and the steps are small.
+    # toward it (0.9/0.1 lerp per model frame). Whole-number steps to
+    # +/-10 at Erik's request, to make the effect unmissable vs placebo.
     self.refresh()
 
   @staticmethod
@@ -125,7 +126,7 @@ class CameraOffsetBigButton(BigButton):
 
   def refresh(self):
     val = self._get_val()
-    self.set_value("0 (stock)" if val == 0.0 else f"{val:+.2f}")
+    self.set_value("0 (stock)" if val == 0.0 else f"{val:+.0f}")
 
   def _handle_mouse_release(self, mouse_pos: MousePos):
     super()._handle_mouse_release(mouse_pos)
