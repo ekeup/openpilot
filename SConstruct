@@ -41,7 +41,25 @@ assert arch in [
 ]
 
 pkg_names = ['acados', 'bzip2', 'capnproto', 'catch2', 'eigen', 'ffmpeg', 'json11', 'libjpeg', 'libyuv', 'ncurses', 'zeromq', 'zstd']
-pkgs = [importlib.import_module(name) for name in pkg_names]
+try:
+  pkgs = [importlib.import_module(name) for name in pkg_names]
+except ImportError:
+  # Newer AGNOS images (comma's current line and StarPilot's) build their Python
+  # environment from upstream openpilot's dependency set, which omits a few
+  # packages this fork still imports (bzip2, catch2, libjpeg, libyuv). Vendored
+  # copies live in third_party/agnos_deps and are a fallback only, so builds on
+  # stock AGNOS are unchanged. See third_party/agnos_deps/README.md.
+  sys.path.append(os.path.join(Dir('#').abspath, 'third_party', 'agnos_deps'))
+  pkgs = []
+  missing = []
+  for name in pkg_names:
+    try:
+      pkgs.append(importlib.import_module(name))
+    except ImportError:
+      pkgs.append(None)
+      missing.append(name)
+  if missing:
+    raise ImportError(f"missing AGNOS dependency packages: {', '.join(missing)}") from None
 acados = pkgs[pkg_names.index('acados')]
 acados_include_dirs = [
   acados.INCLUDE_DIR,
