@@ -40,6 +40,19 @@ class DRIVER_MONITOR_SETTINGS:
     self._MAX_TERMINAL_DURATION = int(30 / DT_DMON)  # not allowed to engage after 30s of terminal alerts
 
     self._FACE_THRESHOLD = 0.7
+    # Fork addition: the face threshold is adjustable from the device UI
+    # (sunnylink panel, "driver monitoring sensitivity"). The
+    # DriverMonitorFaceThreshold param stores it as an integer percent;
+    # stock 70 is the most sensitive setting. Lower values are more
+    # forgiving when sun glare washes out the driver camera and the
+    # model's face confidence dips. Read once here, so a change takes
+    # effect at the next drive start.
+    try:
+      _face_pct = Params().get("DriverMonitorFaceThreshold")
+      if _face_pct is not None:
+        self._FACE_THRESHOLD = max(30, min(70, int(float(_face_pct)))) / 100.
+    except Exception:
+      pass
     self._EYE_THRESHOLD = 0.65
     self._SG_THRESHOLD = 0.9
     self._BLINK_THRESHOLD = 0.865

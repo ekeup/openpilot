@@ -53,6 +53,46 @@ class SunnylinkInfo(Widget):
     self.sponsor_text.set_position(self._rect.x + 20, self._rect.y + 161 - 25)
     self.sponsor_text.render()
 
+DM_FACE_THRESHOLD_OPTIONS = [70, 60, 50, 40]  # percent; 70 is stock / most sensitive
+
+
+class DmSensitivityBigButton(BigButton):
+  # Not a sunnylink feature: this lives in the sunnylink panel only because the
+  # mici settings tree has no better home for it. It writes the
+  # DriverMonitorFaceThreshold param (integer percent); the driver monitoring
+  # policy reads it when the monitoring process starts, so a change takes
+  # effect at the next drive start. Lower percent = the camera model's face
+  # confidence can dip lower before the driver counts as "not seen", which is
+  # what sun glare causes.
+  def __init__(self):
+    super().__init__(tr("driver monitoring sensitivity"), "")
+    self.set_enabled(lambda: not ui_state.engaged)
+    self.refresh()
+
+  @staticmethod
+  def _get_pct() -> int:
+    try:
+      return int(ui_state.params.get("DriverMonitorFaceThreshold") or 70)
+    except (TypeError, ValueError):
+      return 70
+
+  def refresh(self):
+    pct = self._get_pct()
+    self.set_value(str(pct) + "%" + (" (stock)" if pct == 70 else ""))
+
+  def _handle_mouse_release(self, mouse_pos: MousePos):
+    super()._handle_mouse_release(mouse_pos)
+    if ui_state.engaged:
+      return
+    cur = self._get_pct()
+    if cur in DM_FACE_THRESHOLD_OPTIONS:
+      nxt = DM_FACE_THRESHOLD_OPTIONS[(DM_FACE_THRESHOLD_OPTIONS.index(cur) + 1) % len(DM_FACE_THRESHOLD_OPTIONS)]
+    else:
+      nxt = 70
+    ui_state.params.put("DriverMonitorFaceThreshold", nxt)
+    self.refresh()
+
+
 class SunnylinkLayoutMici(NavScroller):
   def __init__(self, back_callback: Callable):
     super().__init__()
@@ -74,10 +114,12 @@ class SunnylinkLayoutMici(NavScroller):
     self._restore_btn.set_click_callback(lambda: self._handle_backup_restore_btn(restore=True))
     self._sunnylink_uploader_toggle = BigToggle(text=tr("sunnylink uploader"), initial_state=False,
                                                 toggle_callback=self._sunnylink_uploader_callback)
+    self._dm_sensitivity_btn = DmSensitivityBigButton()
 
     self._scroller.add_widgets([
       self._sunnylink_info,
       self._sunnylink_toggle,
+      self._dm_sensitivity_btn,
       self._sunnylink_sponsor_button,
       self._sunnylink_pair_button,
       self._backup_btn,
@@ -94,6 +136,9 @@ class SunnylinkLayoutMici(NavScroller):
     self._backup_btn.set_visible(self._sunnylink_enabled)
     self._restore_btn.set_visible(self._sunnylink_enabled)
     self._sunnylink_uploader_toggle.set_visible(self._sunnylink_enabled)
+    # deliberately not gated on sunnylink being enabled: driver monitoring
+    # sensitivity has nothing to do with the sunnylink service
+    self._dm_sensitivity_btn.refresh()
     self.handle_backup_restore_progress()
 
     self._sunnylink_info.device_id_text.set_text(ui_state.params.get("SunnylinkDongleId") or UNREGISTERED_SUNNYLINK_DONGLE_ID)
