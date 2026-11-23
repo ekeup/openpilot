@@ -10,15 +10,11 @@ from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.widgets import DialogResult
 from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog
-from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, option_item_sp
+from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp
 
 DESCRIPTIONS = {
   'enforce_stock_longitudinal': tr_noop(
     'sunnypilot will not take over control of gas and brakes. Factory Honda Nidec longitudinal control will be used.'
-  ),
-  'steer_cap': tr_noop(
-    'Maximum steering torque request for the 2015-16 CR-V. Stock is 1000. Takes effect at the next drive start; ' +
-    'set it while parked, before you drive.'
   ),
 }
 
@@ -35,17 +31,7 @@ class HondaSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
 
-    self.steer_cap = option_item_sp(
-      title=lambda: tr("CR-V: Steering Torque Cap"),
-      param="HondaSteerCapParams",
-      description=lambda: tr(DESCRIPTIONS["steer_cap"]),
-      min_value=500,
-      max_value=2000,
-      value_change_step=50,
-      enabled=lambda: not ui_state.engaged,
-    )
-
-    self.items = [self.enforce_stock_longitudinal, self.steer_cap]
+    self.items = [self.enforce_stock_longitudinal, ]
 
   def _on_enable_enforce_stock_longitudinal(self, state: bool):
     if state:

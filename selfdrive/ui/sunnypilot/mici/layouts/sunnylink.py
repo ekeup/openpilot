@@ -4,8 +4,6 @@ Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
-import bisect
-
 import pyray as rl
 
 from collections.abc import Callable
@@ -55,40 +53,6 @@ class SunnylinkInfo(Widget):
     self.sponsor_text.set_position(self._rect.x + 20, self._rect.y + 161 - 25)
     self.sponsor_text.render()
 
-STEER_CAP_PRESETS = [1000]  # stock only: this CR-V's EPS faults on torque requests above 1000 at highway speed (verified 2026-11-23); opendbc clamps at 1000 regardless
-
-
-class SteerCapBigButton(BigButton):
-  # Not a sunnylink feature: this lives in the sunnylink panel only because the
-  # mici settings tree has no vehicle panel. It writes the same
-  # HondaSteerCapParams param as the tici Vehicle > Honda stepper; the param is
-  # read when CarParams is built, so a change takes effect at the next drive start.
-  def __init__(self):
-    super().__init__(tr("steering torque cap"), "")
-    self.set_enabled(lambda: not ui_state.engaged)
-    self.refresh()
-
-  @staticmethod
-  def _get_cap() -> int:
-    try:
-      return int(ui_state.params.get("HondaSteerCapParams") or 1000)
-    except (TypeError, ValueError):
-      return 1000
-
-  def refresh(self):
-    cap = self._get_cap()
-    self.set_value(str(cap) + (" (stock)" if cap == 1000 else ""))
-
-  def _handle_mouse_release(self, mouse_pos: MousePos):
-    super()._handle_mouse_release(mouse_pos)
-    if ui_state.engaged:
-      return
-    cur = self._get_cap()
-    nxt = STEER_CAP_PRESETS[bisect.bisect_right(STEER_CAP_PRESETS, cur) % len(STEER_CAP_PRESETS)]
-    ui_state.params.put("HondaSteerCapParams", nxt)
-    self.refresh()
-
-
 class SunnylinkLayoutMici(NavScroller):
   def __init__(self, back_callback: Callable):
     super().__init__()
@@ -110,12 +74,10 @@ class SunnylinkLayoutMici(NavScroller):
     self._restore_btn.set_click_callback(lambda: self._handle_backup_restore_btn(restore=True))
     self._sunnylink_uploader_toggle = BigToggle(text=tr("sunnylink uploader"), initial_state=False,
                                                 toggle_callback=self._sunnylink_uploader_callback)
-    self._steer_cap_btn = SteerCapBigButton()
 
     self._scroller.add_widgets([
       self._sunnylink_info,
       self._sunnylink_toggle,
-      self._steer_cap_btn,
       self._sunnylink_sponsor_button,
       self._sunnylink_pair_button,
       self._backup_btn,
@@ -132,8 +94,6 @@ class SunnylinkLayoutMici(NavScroller):
     self._backup_btn.set_visible(self._sunnylink_enabled)
     self._restore_btn.set_visible(self._sunnylink_enabled)
     self._sunnylink_uploader_toggle.set_visible(self._sunnylink_enabled)
-    # the steering cap button is deliberately NOT gated on sunnylink being enabled
-    self._steer_cap_btn.refresh()
     self.handle_backup_restore_progress()
 
     self._sunnylink_info.device_id_text.set_text(ui_state.params.get("SunnylinkDongleId") or UNREGISTERED_SUNNYLINK_DONGLE_ID)
