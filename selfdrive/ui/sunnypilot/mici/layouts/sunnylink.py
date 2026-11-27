@@ -139,6 +139,51 @@ class CameraOffsetBigButton(BigButton):
     self.refresh()
 
 
+INCH_M = 0.0254
+LANE_POS_OPTIONS_IN = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                       -10, -9, -8, -7, -6, -5, -4, -3, -2, -1]
+
+
+class LanePositionBigButton(BigButton):
+  # A true lane-position offset, the steering-path counterpart to the
+  # camera offset button above: controlsd reads the LanePositionOffset
+  # param (metres, + = right of lane centre) and biases the model's
+  # desired curvature so the car holds that offset in the lane
+  # (sunnypilot/selfdrive/controls/lib/lane_position_offset.py). The param
+  # stays in metres; the button speaks inches because that is how Erik
+  # judges lane position. NOT gated on engaged, same as camera offset:
+  # live tuning while driving is the point, and controlsd slews the
+  # applied setpoint (0.03 m/s) so changes arrive gently.
+  def __init__(self):
+    super().__init__(tr("lane position"), "")
+    self.refresh()
+
+  @staticmethod
+  def _get_inches() -> int:
+    try:
+      metres = float(ui_state.params.get("LanePositionOffset") or 0.0)
+    except (TypeError, ValueError):
+      metres = 0.0
+    return int(round(metres / INCH_M))
+
+  def refresh(self):
+    inches = self._get_inches()
+    if inches == 0:
+      self.set_value("0 (centre)")
+    elif inches > 0:
+      self.set_value(f"Right {inches} in")
+    else:
+      self.set_value(f"Left {-inches} in")
+
+  def _handle_mouse_release(self, mouse_pos: MousePos):
+    super()._handle_mouse_release(mouse_pos)
+    cur = self._get_inches()
+    idx = next((i for i, v in enumerate(LANE_POS_OPTIONS_IN) if v == cur), 0)
+    nxt = LANE_POS_OPTIONS_IN[(idx + 1) % len(LANE_POS_OPTIONS_IN)]
+    ui_state.params.put("LanePositionOffset", nxt * INCH_M)
+    self.refresh()
+
+
 class SunnylinkLayoutMici(NavScroller):
   def __init__(self, back_callback: Callable):
     super().__init__()
@@ -162,12 +207,14 @@ class SunnylinkLayoutMici(NavScroller):
                                                 toggle_callback=self._sunnylink_uploader_callback)
     self._dm_sensitivity_btn = DmSensitivityBigButton()
     self._camera_offset_btn = CameraOffsetBigButton()
+    self._lane_pos_btn = LanePositionBigButton()
 
     self._scroller.add_widgets([
       self._sunnylink_info,
       self._sunnylink_toggle,
       self._dm_sensitivity_btn,
       self._camera_offset_btn,
+      self._lane_pos_btn,
       self._sunnylink_sponsor_button,
       self._sunnylink_pair_button,
       self._backup_btn,
@@ -188,6 +235,7 @@ class SunnylinkLayoutMici(NavScroller):
     # sensitivity has nothing to do with the sunnylink service
     self._dm_sensitivity_btn.refresh()
     self._camera_offset_btn.refresh()
+    self._lane_pos_btn.refresh()
     self.handle_backup_restore_progress()
 
     self._sunnylink_info.device_id_text.set_text(ui_state.params.get("SunnylinkDongleId") or UNREGISTERED_SUNNYLINK_DONGLE_ID)

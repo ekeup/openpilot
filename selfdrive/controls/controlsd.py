@@ -139,7 +139,14 @@ class Controls(ControlsExt):
       new_desired_curvature = self.sm['lateralManeuverPlan'].desiredCurvature if CC.latActive else self.curvature
     else:
       new_desired_curvature = model_v2.action.desiredCurvature if CC.latActive else self.curvature
+      # LanePositionOffset (Erik, Nov 27, 2026): bias the model's curvature
+      # so the car holds a small driver-chosen offset from lane centre.
+      # Returns 0.0 whenever lateral is inactive or any gate fails; see
+      # sunnypilot/selfdrive/controls/lib/lane_position_offset.py
+      _freeze_integral = self.steer_limited_by_safety or getattr(self, '_curvature_limited_prev', False)
+      new_desired_curvature += self.lane_position_offset.update(model_v2, CS, CC.latActive, _freeze_integral, DT_CTRL)
     self.desired_curvature, curvature_limited = clip_curvature(CS.vEgo, self.desired_curvature, new_desired_curvature, lp.roll)
+    self._curvature_limited_prev = curvature_limited
     lat_delay = self.sm["liveDelay"].lateralDelay + LAT_SMOOTH_SECONDS
 
     actuators.curvature = self.desired_curvature

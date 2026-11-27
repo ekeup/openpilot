@@ -133,6 +133,14 @@
     "step": 0.01,
     "unit": "meters"
   },
+  "LanePositionOffset": {
+    "title": "Lane Position Offset",
+    "description": "Hold the car offset from lane centre (+ values = right, - values = left). Set live from the sunnylink menu on mici, in inches.",
+    "min": -0.254,
+    "max": 0.254,
+    "step": 0.0254,
+    "unit": "meters"
+  },
   "CarBatteryCapacity": {
     "title": "Car Battery Capacity",
     "description": "Battery Size",
