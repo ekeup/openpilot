@@ -10,7 +10,7 @@ from cereal import log
 
 from openpilot.common.params import Params
 
-LaneChangeState = log.ModelDataV2.MetaData.LaneChangeState
+LaneChangeState = log.LaneChangeState
 
 # A true lane-position offset, added for Erik (Nov 27, 2026) after a Claude
 # code review showed CameraOffset cannot do this job: it only warps the
@@ -78,6 +78,12 @@ class LanePositionOffset:
     # Measure where the car sits in the lane. Model frame: y is + left.
     # laneLines[1] is the left ego line, laneLines[2] the right ego line,
     # and y[0] is at x ~= 0, i.e. at the car.
+    # Guard the list accesses: before the first valid model message these
+    # can be empty, and an IndexError here would kill controlsd's loop.
+    if (len(model_v2.laneLines) < 3 or len(model_v2.laneLineProbs) < 3 or
+        len(model_v2.laneLineStds) < 3 or len(model_v2.laneLines[1].y) == 0 or
+        len(model_v2.laneLines[2].y) == 0):
+      return 0.0
     y_left = model_v2.laneLines[1].y[0]
     y_right = model_v2.laneLines[2].y[0]
     lane_width = y_left - y_right
