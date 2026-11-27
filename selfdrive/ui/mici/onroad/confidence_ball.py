@@ -55,8 +55,7 @@ class ConfidenceBall(Widget, ConfidenceBallSP):
     )
 
     status_dot_radius = 24
-    dot_height = (1 - self._confidence_filter.x) * (content_rect.height - 2 * status_dot_radius) + status_dot_radius
-    dot_height = self._rect.y + dot_height
+    dot_height = self.get_dot_center_y(self._confidence_filter.x, self._rect)
 
     # confidence zones
     if ui_state.status == UIStatus.ENGAGED or self._demo:
