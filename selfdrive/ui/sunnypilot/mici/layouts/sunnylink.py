@@ -97,10 +97,7 @@ class DmSensitivityBigButton(BigButton):
     self.refresh()
 
 
-CAMERA_OFFSET_OPTIONS = [0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0,
-                         22.0, 24.0, 26.0, 28.0, 30.0, 32.0, 34.0, 36.0, 38.0, 40.0,
-                         -40.0, -38.0, -36.0, -34.0, -32.0, -30.0, -28.0, -26.0, -24.0, -22.0,
-                         -20.0, -18.0, -16.0, -14.0, -12.0, -10.0, -8.0, -6.0, -4.0, -2.0]
+CAMERA_OFFSET_OPTIONS = [0.0, 0.35, -0.35]
 
 
 class CameraOffsetBigButton(BigButton):
@@ -115,8 +112,11 @@ class CameraOffsetBigButton(BigButton):
     # Deliberately NOT gated on engaged (unlike the other buttons here):
     # live tuning while driving is the point of this control. modeld
     # re-reads the param about once a second and eases the applied offset
-    # toward it (0.9/0.1 lerp per model frame). Steps of 2 to +/-40 at
-    # Erik's request (Nov 27, 2026): even +/-10 felt too subtle to judge.
+    # toward it (0.9/0.1 lerp per model frame). Three stops only, at
+    # Erik's request: -0.35, 0, +0.35 — the ends of the setting's designed
+    # range (sunnypilot params_metadata). The earlier whole-number and
+    # +/-40 cycles were far out of range and the model largely ignored
+    # them (Claude code review, Nov 27, 2026).
     self.refresh()
 
   @staticmethod
@@ -128,7 +128,7 @@ class CameraOffsetBigButton(BigButton):
 
   def refresh(self):
     val = self._get_val()
-    self.set_value("0 (stock)" if val == 0.0 else f"{val:+.0f}")
+    self.set_value("0 (stock)" if val == 0.0 else f"{val:+.2f}")
 
   def _handle_mouse_release(self, mouse_pos: MousePos):
     super()._handle_mouse_release(mouse_pos)
