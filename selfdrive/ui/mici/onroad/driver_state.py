@@ -3,7 +3,7 @@ import numpy as np
 import math
 from cereal import log
 from openpilot.common.filter_simple import FirstOrderFilter
-from openpilot.system.ui.lib.application import gui_app
+from openpilot.system.ui.lib.application import gui_app, FontWeight
 from openpilot.system.ui.widgets import Widget
 from openpilot.selfdrive.ui.ui_state import ui_state
 
@@ -45,6 +45,8 @@ class DriverStateRenderer(Widget):
     self._force_active = False
     self._looking_center = False
     self._awareness_unfull = False
+    self._awareness_percent = 100  # active policy's awareness, 0-100
+    self._font_semi_bold: rl.Font = gui_app.font(FontWeight.SEMI_BOLD)
 
     self._fade_filter = FirstOrderFilter(0.0, 0.05, 1 / gui_app.target_fps)
     self._color_fade_filter = FirstOrderFilter(1.0, 0.05, 1 / gui_app.target_fps) # 1.0 = full green, 0.0 = full orange
@@ -143,6 +145,31 @@ class DriverStateRenderer(Widget):
           f.update(target)
           self._draw_line(angle, f, self._looking_center)
 
+    # Erik's request (Nov 27, 2026): the active policy's awareness as a
+    # percentage, just to the right of the driver icon, small but readable.
+    # Onroad renderer only — the onboarding (inset) and DM dialog (lines)
+    # variants of this widget keep their existing layouts.
+    if not self._lines and not self._inset and self._fade_filter.x > 0.01:
+      text = f"{self._awareness_percent}%"
+      font_size = int(self._rect.height * 0.5)
+      text_size = rl.measure_text_ex(self._font_semi_bold, text, font_size, 0)
+      # Colour follows the displayed number itself (full green at/above the
+      # unfull threshold, blending to orange as it drops), so the two never
+      # disagree — the cone's fade is vision-based even under wheeltouch.
+      text_green = min(1.0, self._awareness_percent / self.AWARENESS_UNFULL_PERCENT)
+      r = int(round(CONE_COLOR_GREEN[0] * text_green + CONE_COLOR_ORANGE[0] * (1 - text_green)))
+      g = int(round(CONE_COLOR_GREEN[1] * text_green + CONE_COLOR_ORANGE[1] * (1 - text_green)))
+      b = int(round(CONE_COLOR_GREEN[2] * text_green + CONE_COLOR_ORANGE[2] * (1 - text_green)))
+      rl.draw_text_ex(
+        self._font_semi_bold,
+        text,
+        rl.Vector2(self._rect.x + self._rect.width + 10,
+                   self._rect.y + (self._rect.height - text_size.y) / 2),
+        font_size,
+        0,
+        rl.Color(r, g, b, int(255 * self._fade_filter.x)),
+      )
+
   def _draw_line(self, angle: int, f: FirstOrderFilter, grey: bool):
     line_length = self._rect.width / 6
     line_length = round(np.interp(f.x, [0.0, 1.0], [0, line_length]))
@@ -169,6 +196,9 @@ class DriverStateRenderer(Widget):
     self._is_rhd = dm_state.isRHD
     self._face_detected = dm_state.visionPolicyState.faceDetected
     self._awareness_unfull = self.effective_active and dm_state.visionPolicyState.awarenessPercent < self.AWARENESS_UNFULL_PERCENT
+    # The awareness the active policy is actually using (same choice as driver_camera_dialog)
+    raw_percent = dm_state.visionPolicyState.awarenessPercent if self._is_active else dm_state.wheeltouchPolicyState.awarenessPercent
+    self._awareness_percent = max(0, min(100, int(raw_percent)))
     self._face_pitch = dm_state.visionPolicyState.pose.pitch + math.radians(6) # calib or DM pose is not accurate, add a fake upward pitch to bias forward
     self._face_yaw = -dm_state.visionPolicyState.pose.yaw # undo sign flip in face_orientation_from_model to match UI convention
 
