@@ -25,7 +25,7 @@ from openpilot.system.ui.lib.text_measure import measure_text_cached
 # chevron was, so it follows the chevron's visibility: shown whenever the
 # lead indicator renders (openpilot longitudinal control + valid
 # radarState), including while disengaged.
-LEAD_SPEED_FONT_SIZE = 26
+LEAD_SPEED_FONT_SIZE = 39
 MAX_LEAD_SPEED = 100.0  # m/s; beyond this the radar value is not sane
 
 SCREEN_MARGIN = 16
