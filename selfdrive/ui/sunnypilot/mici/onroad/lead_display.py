@@ -9,25 +9,24 @@ import math
 import numpy as np
 import pyray as rl
 
+from openpilot.common.constants import CV
+from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app, FontWeight
-from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 
-# Erik's request (Nov 27, 2026): a large following-gap readout in seconds
-# under the lead car on the mici onroad view, drawn together with the stock
-# lead chevron (ModelRenderer._draw_lead_indicator). The matching distance /
-# relative-speed chip lives in HudRendererSP so it is drawn after the onroad
-# fade, next to the other HUD elements. Sized for the mici surface (536x240,
-# content rect 476x240): the block goes below the chevron when it fits above
-# the reserved bottom zone (torque bar + chip), otherwise above the chevron,
-# the same strategy as tici's ChevronMetrics.
-GAP_FONT_SIZE = 44
-GAP_LABEL_FONT_SIZE = 20
-GAP_TOP_MARGIN = 10
-GAP_LINE_SPACING = 3
-GAP_BOTTOM_RESERVE = 114  # px reserved at bottom-centre for the chip and torque bar
-MIN_GAP_EGO_SPEED = 1.0   # m/s; below this a gap in seconds is meaningless
-MAX_GAP_SECONDS = 30.0    # beyond this it is not a following gap worth showing
+# Erik's request (Nov 27, 2026, revised the same evening): the only lead-car
+# readout he wants is the lead vehicle's own speed — a bare number, no unit
+# label, overlaid at the lead car's position on the camera view. This
+# replaces the earlier same-day display (chevron + gap-in-seconds hero +
+# distance/relative-speed chip), which he found too much; the chevron, the
+# gap readout and the chip are all gone. The number is centred on the spot
+# the stock lead chevron occupied (its position still comes from
+# ModelRenderer._update_leads) and is drawn in the model renderer like the
+# chevron was, so it follows the chevron's visibility: shown whenever the
+# lead indicator renders (openpilot longitudinal control + valid
+# radarState), including while disengaged.
+LEAD_SPEED_FONT_SIZE = 26
+MAX_LEAD_SPEED = 100.0  # m/s; beyond this the radar value is not sane
 
 SCREEN_MARGIN = 16
 
@@ -35,10 +34,9 @@ SCREEN_MARGIN = 16
 class LeadDisplay:
   def __init__(self):
     self._font_bold = gui_app.font(FontWeight.BOLD)
-    self._font_medium = gui_app.font(FontWeight.MEDIUM)
 
   def draw(self, sm, radar_state, rect: rl.Rectangle, lead_vehicles) -> None:
-    """Draw the following gap in seconds under the lead chevron, if a lead is present."""
+    """Draw the lead vehicle's speed (bare number) at the lead car's position."""
     lead = radar_state.leadOne
     if not lead or not lead.status:
       return
@@ -47,37 +45,34 @@ class LeadDisplay:
     if not lead_vehicle.chevron or len(lead_vehicle.chevron) < 3:
       return
 
-    v_ego = sm['carState'].vEgo
-    if not math.isfinite(lead.dRel) or not math.isfinite(v_ego):
-      return
-    if v_ego < MIN_GAP_EGO_SPEED:
-      return
-    gap = lead.dRel / v_ego
-    if not 0.0 < gap <= MAX_GAP_SECONDS:
+    # Absolute lead speed: radard's vLead when it is populated, otherwise
+    # reconstruct it from ego speed + relative speed.
+    v_lead = None
+    if math.isfinite(lead.vLead) and lead.vLead > 0.0:
+      v_lead = lead.vLead
+    else:
+      v_ego = sm['carState'].vEgo
+      if math.isfinite(lead.vRel) and math.isfinite(v_ego):
+        v_lead = v_ego + lead.vRel
+    if v_lead is not None and -0.5 <= v_lead < 0.0:
+      v_lead = 0.0  # filter noise around a stopped lead, not a real negative speed
+    if v_lead is None or not math.isfinite(v_lead) or not 0.0 <= v_lead <= MAX_LEAD_SPEED:
       return
 
-    gap_text = f"{gap:.1f} s"
-    gap_size = measure_text_cached(self._font_bold, gap_text, GAP_FONT_SIZE)
-    label_text = tr("GAP")
-    label_size = measure_text_cached(self._font_medium, label_text, GAP_LABEL_FONT_SIZE)
-    block_height = gap_size.y + GAP_LINE_SPACING + label_size.y
+    conversion = CV.MS_TO_KPH if ui_state.is_metric else CV.MS_TO_MPH
+    speed_text = str(round(v_lead * conversion))
+    text_size = measure_text_cached(self._font_bold, speed_text, LEAD_SPEED_FONT_SIZE)
 
-    chevron_x = lead_vehicle.chevron[1][0]
-    text_y = lead_vehicle.chevron[0][1] + GAP_TOP_MARGIN
-    if text_y + block_height > rect.height - GAP_BOTTOM_RESERVE:
-      # No room below the chevron: draw the block above it instead
-      text_y = lead_vehicle.chevron[1][1] - GAP_TOP_MARGIN - block_height
-    # Hard cap: the block must never enter the reserved bottom zone (chip +
-    # torque bar), even when a close lead pushes the chevron itself into it
-    text_y = min(text_y, rect.height - GAP_BOTTOM_RESERVE - block_height)
-    text_y = float(np.clip(text_y, SCREEN_MARGIN, max(SCREEN_MARGIN, rect.height - SCREEN_MARGIN - block_height)))
-
-    gap_x = float(np.clip(chevron_x - gap_size.x / 2, SCREEN_MARGIN, max(SCREEN_MARGIN, rect.width - gap_size.x - SCREEN_MARGIN)))
-    label_x = float(np.clip(chevron_x - label_size.x / 2, SCREEN_MARGIN, max(SCREEN_MARGIN, rect.width - label_size.x - SCREEN_MARGIN)))
+    # Centre the number on the chevron's position: apex x, midway between
+    # the apex and the base.
+    chevron = lead_vehicle.chevron
+    center_x = chevron[1][0]
+    center_y = (chevron[1][1] + chevron[0][1]) / 2
+    text_x = float(np.clip(center_x - text_size.x / 2, SCREEN_MARGIN,
+                           max(SCREEN_MARGIN, rect.width - text_size.x - SCREEN_MARGIN)))
+    text_y = float(np.clip(center_y - text_size.y / 2, SCREEN_MARGIN,
+                           max(SCREEN_MARGIN, rect.height - text_size.y - SCREEN_MARGIN)))
 
     shadow_color = rl.Color(0, 0, 0, 200)
-    rl.draw_text_ex(self._font_bold, gap_text, rl.Vector2(gap_x + 2, text_y + 2), GAP_FONT_SIZE, 0, shadow_color)
-    rl.draw_text_ex(self._font_bold, gap_text, rl.Vector2(gap_x, text_y), GAP_FONT_SIZE, 0, rl.WHITE)
-    label_y = text_y + gap_size.y + GAP_LINE_SPACING
-    rl.draw_text_ex(self._font_medium, label_text, rl.Vector2(label_x + 1, label_y + 1), GAP_LABEL_FONT_SIZE, 0, shadow_color)
-    rl.draw_text_ex(self._font_medium, label_text, rl.Vector2(label_x, label_y), GAP_LABEL_FONT_SIZE, 0, rl.Color(255, 255, 255, 200))
+    rl.draw_text_ex(self._font_bold, speed_text, rl.Vector2(text_x + 2, text_y + 2), LEAD_SPEED_FONT_SIZE, 0, shadow_color)
+    rl.draw_text_ex(self._font_bold, speed_text, rl.Vector2(text_x, text_y), LEAD_SPEED_FONT_SIZE, 0, rl.WHITE)

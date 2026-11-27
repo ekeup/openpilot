@@ -154,9 +154,11 @@ class ModelRenderer(Widget, ModelRendererSP):
       self._draw_path(sm)
 
     if render_lead_indicator and radar_state:
-      self._draw_lead_indicator()
-      if ui_state.status != UIStatus.DISENGAGED:
-        self.lead_display.draw(sm, radar_state, self._rect, self._lead_vehicles)
+      # Erik (Nov 27, 2026): no chevron — the lead display is only the lead
+      # vehicle's speed, drawn at the lead car's position (see LeadDisplay).
+      # It follows the chevron's old visibility, i.e. it is not gated on
+      # disengaged.
+      self.lead_display.draw(sm, radar_state, self._rect, self._lead_vehicles)
 
   def _update_raw_points(self, model):
     """Update raw 3D points from model data"""
