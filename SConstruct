@@ -50,6 +50,7 @@ except ImportError:
   # copies live in third_party/agnos_deps and are a fallback only, so builds on
   # stock AGNOS are unchanged. See third_party/agnos_deps/README.md.
   sys.path.append(os.path.join(Dir('#').abspath, 'third_party', 'agnos_deps'))
+  print("SConstruct: system AGNOS deps incomplete; falling back to vendored third_party/agnos_deps", file=sys.stderr)
   pkgs = []
   missing = []
   for name in pkg_names:
